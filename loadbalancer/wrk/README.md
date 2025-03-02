@@ -16,3 +16,7 @@ sudo cp wrk /usr/local/bin
 ```
 ./run-all.sh --duration 30 --server http://localhost
 ```
+
+
+### Alternatives
+1. Meshery: wrk2 is one of the 3 default load generators that it supports out of the box. Good for non-cli users
