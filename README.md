@@ -1,3 +1,3 @@
 # Workloads
 
-This repo consists of instructions/guide to setup and benchmark workloads for scale.
+This repo consists of instructions to setup and benchmark workloads for scale.
