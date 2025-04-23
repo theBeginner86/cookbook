@@ -19,13 +19,13 @@ spec:
             - -c
           args:
             - |-
-              apt-get update;
+                apt-get update;
                 apt-get install sudo openssh-server -y;
-                usermod --password $(echo 12345 | openssl passwd -1 -stdin) root;
+                usermod --password $(echo $PASSWORD | openssl passwd -1 -stdin) root;
                 echo "PermitRootLogin yes" >> /etc/ssh/sshd_config;
                 service ssh restart;
-                echo "https_proxy=http://proxy01.iind.intel.com:912/" >> /etc/environment;
-                echo "http_proxy=http://proxy01.iind.intel.com:911/" >> /etc/environment;
+                echo "https_proxy=$https_proxy" >> /etc/environment;
+                echo "http_proxy=$http_proxy" >> /etc/environment;
                 echo "no_proxy=127.0.0.1,localhost" >> /etc/environment;
                 git clone https://github.com/huggingface/optimum-habana;
                 git clone https://github.com/HabanaAI/DeepSpeed;
@@ -71,6 +71,8 @@ spec:
               value: "false"
             - name: VLLM_HPU_LOG_STEP_CPU_FALLBACKS_ALL
               value: "false"
+            - name: PASSWORD
+              value: $PASSWORD
           securityContext:
             capabilities:
                 add:

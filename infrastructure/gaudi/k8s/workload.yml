@@ -1,0 +1,99 @@
+apiVersion: v1
+kind: Pod
+metadata:
+   name: thebeginner86-gaudi-pod
+   namespace: experimentation
+   labels:
+    app: thebeginner86
+spec:
+   hostIPC: true
+   runtimeClassName: habana
+   nodeSelector:
+      kubernetes.io/hostname: g2-r2-2
+   containers:
+      - name: container
+        image: vault.habana.ai/gaudi-docker/1.19.0/ubuntu24.04/habanalabs/pytorch-installer-2.5.1:latest
+        workingDir: /root
+        command: ["/bin/sh", "-c"]
+        args:
+         -  apt-get update;
+            apt-get install sudo openssh-server -y;
+            usermod --password $(echo $PASSWORD | openssl passwd -1 -stdin) root;
+            echo "PermitRootLogin yes" >> /etc/ssh/sshd_config;
+            ssh-keygen -A;
+            service ssh --full-restart;
+            echo "https_proxy=$https_proxy" >> /etc/environment;
+            echo "http_proxy=$http_proxy" >> /etc/environment;
+            echo "no_proxy=127.0.0.1,localhost" >> /etc/environment;
+            git clone https://github.com/huggingface/optimum-habana;
+            git clone https://github.com/HabanaAI/DeepSpeed;
+            cd optimum-habana;
+            pip install .;
+            cd ../DeepSpeed;
+            pip install .;
+            sleep infinity;
+        env:
+         - name: http_proxy
+           value: $http_proxy
+         - name: https_proxy
+           value: $http_proxy"
+         - name: no_proxy
+           value: "127.0.0.1,localhost"
+         - name: OMPI_MCA_btl_vader_single_copy_mechanism
+           value: "none"
+         - name: HUGGING_FACE_HUB_TOKEN
+           value: $HUGGING_FACE_HUB_TOKEN
+         - name: PASSWORD
+           value: $PASSWORD
+        securityContext:
+            capabilities:
+               add: ["SYS_NICE"]
+        volumeMounts:
+        - name: model-cache
+          mountPath: /root/.cache/huggingface/hub
+        - name: user-vol
+          mountPath: /root/thebeginner86
+        resources:
+          requests:
+            habana.ai/gaudi: 1
+          limits:
+            habana.ai/gaudi: 1
+   volumes:
+      - name: model-cache
+        hostPath:
+          path: /mnt/hf_cache
+      - name: user-vol
+        hostPath:
+          path: /home/intel/kubernetes_files/thebeginner86
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: thebeginner86-service
+  namespace: experimentation
+spec:
+  type: NodePort
+  ports:
+    - port: 22
+      targetPort: 22
+      name: ssh
+    - port: 3000
+      targetPort: 3000
+      name: frontend
+    - port: 8000
+      targetPort: 8000
+      name: gateway
+    - port: 8001
+      targetPort: 8001
+      name: fastapi
+    - port: 8888
+      targetPort: 8888
+      name: jupyter
+    - port: 5000
+      targetPort: 5000
+      name: mlflow
+    - port: 8265
+      targetPort: 8265
+      name: ray
+  selector:
+    app: thebeginner86

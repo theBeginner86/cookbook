@@ -1,0 +1,99 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: inference-triton
+  name: inference-triton
+  namespace: experimentation
+spec:
+  containers:
+  - args:
+    - 'apt-get update;
+       apt-get install sudo openssh-server -y;
+       usermod --password $(echo $PASSWORD | openssl passwd -1 -stdin) root;
+       echo "PermitRootLogin yes" >> /etc/ssh/sshd_config;
+       service ssh restart;
+       echo "https_proxy=$https_proxy" >> /etc/environment;
+       echo "http_proxy=$http_proxy" >> /etc/environment;
+       echo "no_proxy=127.0.0.1,localhost" >> /etc/environment;
+       git clone https://github.com/huggingface/optimum-habana.git && pip install -e optimum-habana/.;
+       pip install git+https://github.com/HabanaAI/DeepSpeed.git@1.19.0;
+       sleep infinity;'
+    command:
+    - /bin/sh
+    - -c
+    env:
+    - name: http_proxy
+      value: $http_proxy
+    - name: https_proxy
+      value: $http_proxy
+    - name: no_proxy
+      value: 127.0.0.1,localhost
+    - name: HUGGING_FACE_HUB_TOKEN
+      value: $HUGGING_FACE_HUB_TOKEN
+    - name: PASSWORD
+      value: $PASSWORD
+    - name: OMPI_MCA_btl_vader_single_copy_mechanism
+      value: none
+    image: gar-registry.caas.intel.com/aice/triton:1.16.2
+    name: habana-container
+    resources:
+      limits:
+        habana.ai/gaudi: 1
+        hugepages-2Mi: 950Mi
+        memory: 50Gi
+      requests:
+        habana.ai/gaudi: 1
+        hugepages-2Mi: 950Mi
+        memory: 50Gi
+    securityContext:
+      capabilities:
+        add:
+        - SYS_NICE
+    volumeMounts:
+    - mountPath: /root/kubernetes_files
+      name: whisper
+    - mountPath: /root/.cache/huggingface/hub
+      name: model-volume
+    - mountPath: /root/.cache/huggingface/datasets
+      name: model-dataset
+    workingDir: /root
+  hostIPC: true
+  runtimeClassName: habana
+  volumes:
+  - hostPath:
+      path: /home/intel/kubernetes_files/akshit
+    name: whisper
+  - hostPath:
+      path: /mnt/hf_cache/
+    name: model-volume
+  - hostPath:
+      path: /mnt/hf_cache/
+    name: model-dataset
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inference-triton
+  namespace: experimentation
+spec:
+  ports:
+    - port: 22
+      targetPort: 22
+      protocol: TCP
+      name: ssh
+    - port: 8000
+      targetPort: 8000
+      name: server
+    - port: 8001
+      targetPort: 8001
+      name: grpc
+    - port: 8002
+      targetPort: 8002
+      name: health
+    - port: 9000
+      targetPort: 9000
+      name: fastapi
+  selector:
+    app: inference-triton
+  type: NodePort

@@ -15,7 +15,7 @@ sh -c "
 apt-get update; 
 apt-get install;
 sudo openssh-server -y; 
-usermod --password '$(echo 12345 | openssl passwd -1 -stdin)' root;
+usermod --password '$(echo $PASSWORD | openssl passwd -1 -stdin)' root;
 echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config;
 ssh-keygen -A; service ssh --full-restart; 
 echo 'https_proxy=$http_proxy' >> /etc/environment; 
