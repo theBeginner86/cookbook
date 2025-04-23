@@ -1,0 +1,119 @@
+apiVersion: v1
+kind: Pod
+metadata:
+    name: inference-vllm
+    namespace: experimentation
+    labels:
+        app: inference-vllm
+spec:
+    hostIPC: true
+    runtimeClassName: habana
+    nodeSelector:
+        kubernetes.io/hostname: g2-r2-2
+    containers:
+        - name: habana-container
+          image: vault.habana.ai/gaudi-docker/1.19.0/ubuntu24.04/habanalabs/pytorch-installer-2.5.1:latest
+          workingDir: /root
+          command:
+            - /bin/sh
+            - -c
+          args:
+            - |-
+              apt-get update;
+                apt-get install sudo openssh-server -y;
+                usermod --password $(echo 12345 | openssl passwd -1 -stdin) root;
+                echo "PermitRootLogin yes" >> /etc/ssh/sshd_config;
+                service ssh restart;
+                echo "https_proxy=http://proxy01.iind.intel.com:912/" >> /etc/environment;
+                echo "http_proxy=http://proxy01.iind.intel.com:911/" >> /etc/environment;
+                echo "no_proxy=127.0.0.1,localhost" >> /etc/environment;
+                git clone https://github.com/huggingface/optimum-habana;
+                git clone https://github.com/HabanaAI/DeepSpeed;
+                cd optimum-habana;
+                pip install .;
+                cd ../DeepSpeed;
+                pip install . && cd ..;
+                #sleep infinity;
+                git clone https://github.com/HabanaAI/vllm-fork.git && cd vllm-fork; pip install -e .;
+                vllm serve meta-llama/Meta-Llama-3.1-8B-Instruct
+          env:
+            - name: http_proxy
+              value: http://proxy01.iind.intel.com:911/
+            - name: https_proxy
+              value: http://proxy01.iind.intel.com:912/
+            - name: no_proxy
+              value: 127.0.0.1,localhost
+            - name: HUGGING_FACE_HUB_TOKEN
+              value: $HUGGING_FACE_HUB_TOKEN
+            - name: OMPI_MCA_btl_vader_single_copy_mechanism
+              value: none
+            - name: VLLM_GRAPH_PROMPT_STRATEGY
+              value: min_tokens
+            - name: VLLM_GRAPH_DECODE_STRATEGY
+              value: max_bs
+            - name: PT_HPU_ENABLE_LAZY_COLLECTIVES
+              value: "true"
+            - name: PT_HPU_LAZY_MODE
+              value: "1"
+            - name: VLLM_SKIP_WARMUP
+              value: "false"
+            - name: VLLM_GRAPH_RESERVED_MEM
+              value: "0.4"
+            - name: VLLM_GRAPH_PROMPT_RATIO
+              value: "0.5"
+            - name: VLLM_PROFILER_ENABLED
+              value: "false"
+            - name: VLLM_HPU_LOG_STEP_GRAPH_COMPLIATION
+              value: "false"
+            - name: VLLM_HPU_LOG_STEP_GRAPH_COMPLIATIO_ALL
+              value: "false"
+            - name: VLLM_HPU_LOG_STEP_CPU_FALLBACKS
+              value: "false"
+            - name: VLLM_HPU_LOG_STEP_CPU_FALLBACKS_ALL
+              value: "false"
+          securityContext:
+            capabilities:
+                add:
+                    - SYS_NICE
+          volumeMounts:
+            - name: model-volume
+              mountPath: /root/.cache/huggingface/hub
+          readinessProbe:
+            initialDelaySeconds: 15
+            periodSeconds: 12
+            successThreshold: 3
+            httpGet:
+                path: /health
+                port: 8000
+                scheme: HTTP
+          resources:
+            limits:
+                habana.ai/gaudi: "1"
+                hugepages-2Mi: 950Mi
+                memory: 50Gi
+            requests:
+                habana.ai/gaudi: "1"
+                hugepages-2Mi: 950Mi
+                memory: 50Gi
+    volumes:
+        - name: model-volume
+          hostPath:
+            path: /mnt/hf_cache
+---
+apiVersion: v1
+kind: Service
+metadata:
+    name: inference-vllm
+    namespace: experimentation
+    labels:
+        app: inference-vllm
+spec:
+    selector:
+        app: inference-vllm
+    ports:
+        - name: http
+          protocol: TCP
+          port: 31036
+          targetPort: 8000
+          nodePort: 31026
+    type: NodePort
