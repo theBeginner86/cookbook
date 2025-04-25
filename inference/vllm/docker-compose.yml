@@ -1,0 +1,113 @@
+version: '3.8' 
+
+networks: 
+  vllm_net: 
+    driver: bridge 
+services: 
+  haproxy: 
+    container_name: haproxy_container 
+    cpuset: 72-95 
+    image: haproxy:latest 
+    networks: 
+      - vllm_net 
+    ports: 
+      - 8000:8000 
+    restart: always 
+    volumes: 
+      - /home/intel/smg/cookbook/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro 
+  vllm-1: 
+    command: 
+      - --model 
+      - meta-llama/Llama-2-7b-chat-hf 
+      - -tp 
+      - '1' 
+      - --dtype 
+      - bfloat16 
+      - --device 
+      - cpu 
+      - --disable-sliding-window 
+      - --distributed-executor-backend 
+      - mp 
+      - --max-num-batched-tokens 
+      - '4096' 
+      - --max-seq-len-to-capture 
+      - '32768' 
+      - --max-num-seqs 
+      - '4096' 
+    container_name: vllm_container_1 
+    cpuset: 0-23 
+    environment: 
+      - VLLM_USE_V1=0 
+      - VLLM_ALLOW_LONG_MAX_MODEL_LEN=1 
+      - VLLM_ENGINE_ITERATION_TIMEOUT_S=600 
+      - VLLM_CPU_KVCACHE_SPACE=80 
+      - VLLM_CPU_OMP_THREADS_BIND=0-23 
+      - HF_TOKEN=$HF_TOKEN 
+      - http_proxy=$http_proxy 
+      - https_proxy=$https_proxy 
+      - no_proxy=$no_proxy 
+    healthcheck: 
+      interval: 10s 
+      retries: 50 
+      start_period: 30s 
+      test: 
+        - CMD 
+        - curl 
+        - -f 
+        - http://localhost:8000/v1/models 
+      timeout: 5s 
+    image: navchetna/vllm-cpu:open 
+    networks: 
+      - vllm_net 
+    privileged: true 
+    volumes: 
+      - /home/intel/.cache/huggingface/hub:/root/.cache/huggingface/hub 
+  vllm-2: 
+    command: 
+      - --model 
+      - meta-llama/Llama-2-7b-chat-hf 
+      - -tp 
+      - '1' 
+      - --dtype 
+      - bfloat16 
+      - --device 
+      - cpu 
+      - --disable-sliding-window 
+      - --distributed-executor-backend 
+      - mp 
+      - --max-num-batched-tokens 
+      - '4096' 
+      - --max-seq-len-to-capture 
+      - '32768' 
+      - --max-num-seqs 
+      - '4096' 
+    container_name: vllm_container_2 
+    cpuset: 24-47 
+    environment: 
+      - VLLM_USE_V1=0 
+      - VLLM_ALLOW_LONG_MAX_MODEL_LEN=1 
+      - VLLM_ENGINE_ITERATION_TIMEOUT_S=600 
+      - VLLM_CPU_KVCACHE_SPACE=80 
+      - VLLM_CPU_OMP_THREADS_BIND=24-47 
+      - HF_TOKEN=$HF_TOKEN 
+      - http_proxy=$http_proxy 
+      - https_proxy=$https_proxy 
+      - no_proxy=$no_proxy 
+    healthcheck: 
+      interval: 10s 
+      retries: 50 
+      start_period: 30s 
+      test: 
+        - CMD 
+        - curl 
+        - -f 
+        - http://localhost:8000/v1/models 
+      timeout: 5s 
+    image: navchetna/vllm-cpu:open 
+    networks: 
+      - vllm_net 
+    privileged: true 
+    volumes: 
+      - /home/intel/.cache/huggingface/hub:/root/.cache/huggingface/hub 
+
+ 
