@@ -12,19 +12,19 @@ docker run -d --runtime=habana -p 31090:22 \
 -e HUGGING_FACE_HUB_TOKEN=$HUGGING_FACE_HUB_TOKEN \
 vault.habana.ai/gaudi-docker/1.20.1/ubuntu24.04/habanalabs/pytorch-installer-2.6.0:latest \
 sh -c "
-apt-get update; 
+apt-get update;
 apt-get install;
-sudo openssh-server -y; 
+sudo openssh-server -y;
 usermod --password '$(echo $PASSWORD | openssl passwd -1 -stdin)' root;
 echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config;
-ssh-keygen -A; service ssh --full-restart; 
-echo 'https_proxy=$http_proxy' >> /etc/environment; 
+ssh-keygen -A; service ssh --full-restart;
+echo 'https_proxy=$http_proxy' >> /etc/environment;
 echo 'http_proxy=$https_proxy' >> /etc/environment;
-echo 'no_proxy=127.0.0.1,localhost' >> /etc/environment; 
-git clone https://github.com/huggingface/optimum-habana; 
-git clone https://github.com/HabanaAI/DeepSpeed; 
-cd optimum-habana; pip install .; cd ../DeepSpeed; pip install .; cd ..; 
-git clone https://github.com/HabanaAI/vllm-fork.git && 
-cd vllm-fork; pip install -e .; 
+echo 'no_proxy=127.0.0.1,localhost' >> /etc/environment;
+git clone https://github.com/huggingface/optimum-habana;
+git clone https://github.com/HabanaAI/DeepSpeed;
+cd optimum-habana; pip install .; cd ../DeepSpeed; pip install .; cd ..;
+git clone https://github.com/HabanaAI/vllm-fork.git &&
+cd vllm-fork; pip install -e .;
 sleep infinity
 "

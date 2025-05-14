@@ -18,7 +18,7 @@ services:
   vllm-1: 
     command: 
       - --model 
-      - meta-llama/Llama-2-7b-chat-hf 
+      - $MODEL_ID 
       - -tp 
       - '1' 
       - --dtype 
