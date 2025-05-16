@@ -40,4 +40,26 @@ chmod -R 777 /var/run/mysqld/
 /usr/sbin/mysqld --upgrade=FORCE
 ```
 
+### Fix [InnoDB] io_setup() failed with EAGAIN. Will make 5 attempts before giving up
+
+1. check aio-max-nr
+```
+cat /proc/sys/fs/aio-max-nr # sysctl fs.aio-max-nr
+cat /proc/sys/fs/aio-nr # sysctl fs.aio-nr
+```
+2. set aio-max-nr (tmp for current sys boot)
+```
+sudo sysctl -w fs.aio-max-nr=1048576
+```
+3. set aio-max-nr (permanent for all sys boots)
+```
+echo "fs.aio-max-nr = 1048576" | sudo tee -a /etc/sysctl.conf
+sudo sysctl -p
+```
+4. Restart mysql
+```
+systemctl restart mysql
+```
+
+
 > In any emergency, make sure to stop before running anything otherwise it could lead to noop and entire linux box being stuck
