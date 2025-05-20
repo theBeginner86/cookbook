@@ -62,7 +62,7 @@ spec:
   runtimeClassName: habana
   volumes:
   - hostPath:
-      path: /home/intel/kubernetes_files/akshit
+      path: /home/intel/kubernetes_files/thebeginner86
     name: whisper
   - hostPath:
       path: /mnt/hf_cache/
