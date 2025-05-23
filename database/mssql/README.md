@@ -10,7 +10,7 @@
 2. enter into docker container
    
 ```bash
-   docker exec -it sql1 /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P ms-SQL-password25
+   docker exec -it sql1 /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P ms-SQL-password25 -C
 ```
 3. Source bak file
 ```sql
