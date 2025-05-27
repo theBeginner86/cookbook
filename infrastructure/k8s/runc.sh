@@ -1,6 +1,6 @@
 # set runC as systemc group
 
-sudo mv etc/containerd/config.toml etc/containerd/config.toml.orig
+sudo mv /etc/containerd/config.toml /etc/containerd/config.toml.orig
 containerd config default | sudo tee /etc/containerd/config.toml
 
 sudo sed -i 's/SystemdCgroup \= false/SystemdCgroup \= true/g' /etc/containerd/config.toml
