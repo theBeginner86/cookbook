@@ -1,0 +1,122 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: inference-tgi
+  name: inference-tgi
+  namespace: inference-benchmark-tool
+spec:
+  containers:
+    - command:
+        - text-generation-launcher
+        - --json-output
+        - --trust-remote-code
+        - --model-id
+        - meta-llama/Meta-Llama-3-8B-Instruct
+        - --max-input-tokens
+        - "1024"
+        - --max-total-tokens
+        - "2048"
+        - --max-batch-size
+        - "16"
+        - --max-batch-total-tokens
+        - "65536"
+        - --max-waiting-tokens
+        - "7"
+        - --max-batch-prefill-tokens
+        - "2048"
+        - --max-concurrent-requests
+        - "512"
+        - --waiting-served-ratio
+        - "1.2"
+      env:
+        - name: http_proxy
+          value: http://proxy01.iind.intel.com:911/
+        - name: https_proxy
+          value: http://proxy01.iind.intel.com:912/
+        - name: no_proxy
+          value: 127.0.0.1,localhost
+        - name: HUGGING_FACE_HUB_TOKEN
+          value: $HF_TOKEN
+        - name: OMPI_MCA_btl_vader_single_copy_mechanism
+          value: none
+        - name: BATCH_BUCKET_SIZE
+          value: "32"
+        - name: USE_FLASH_ATTENTION
+          value: "true"
+        - name: FLASH_ATTENTION_RECOMPUTE
+          value: "true"
+        - name: SKIP_TOKENIZER_IN_TGI
+          value: "false"
+        - name: ENABLE_HPU_GRAPHS
+          value: "true"
+        - name: LIMIT_HPU_GRAPHS
+          value: "true"
+        - name: TEXT_GENERATION_SERVER_IGNORE_EOS
+          value: "true"
+        - name: WARMUP_ENABLED
+          value: "true"
+        - name: PREFILL_BATCH_BUCKET_SIZE
+          value: "2"
+        - name: PAD_SEQUENCE_TO_MULTIPLE_OF
+          value: "128"
+        - name: PROF_WAITSTEP
+          value: "0"
+        - name: PROF_WARMUPSTEP
+          value: "0"
+        - name: PROF_STEP
+          value: "0"
+        - name: PROF_PATH
+          value: /tmp/hpu_profile
+        - name: PROF_RANKS
+          value: "0"
+        - name: PROF_RECORD_SHAPES
+          value: "False"
+      image: gar-registry.caas.intel.com/aice/tgi-gaudi:2.0.4
+      name: habana-container
+      readinessProbe:
+        httpGet:
+          path: /info
+          port: 80
+          scheme: HTTP
+        initialDelaySeconds: 30
+        periodSeconds: 12
+        successThreshold: 3
+      resources:
+        limits:
+          habana.ai/gaudi: 1
+          hugepages-2Mi: 950Mi
+          memory: 50Gi
+        requests:
+          habana.ai/gaudi: 1
+          hugepages-2Mi: 950Mi
+          memory: 50Gi
+      securityContext:
+        capabilities:
+          add:
+            - SYS_NICE
+      volumeMounts:
+        - mountPath: /data
+          name: model-volume
+      workingDir: /root
+  hostIPC: true
+  runtimeClassName: habana
+  volumes:
+    - hostPath:
+        path: /home/intel/.cache/huggingface/hub
+      name: model-volume
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inference-tgi
+  namespace: inference-benchmark-tool
+spec:
+  ports:
+    - nodePort: 31038
+      port: 31038
+      protocol: TCP
+      targetPort: 80
+  selector:
+    app: inference-tgi
+  type: NodePort
